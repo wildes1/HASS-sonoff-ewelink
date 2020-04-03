@@ -2,53 +2,53 @@ import logging, time, json
 
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.components.switch import DOMAIN
-# from homeassistant.components.sonoff import (DOMAIN as SONOFF_DOMAIN, SonoffDevice)
-from custom_components.sonoff import (DOMAIN as SONOFF_DOMAIN, SonoffDevice)
+# from homeassistant.components.sonoffewe import (DOMAIN as SONOFFEWE_DOMAIN, SonoffeweDevice)
+from custom_components.sonoffewe import (DOMAIN as SONOFFEWE_DOMAIN, SonoffeweDevice)
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Add the Sonoff Switch entities"""
+    """Add the Sonoffewe Switch entities"""
 
     entities = []
-    for device in hass.data[SONOFF_DOMAIN].get_devices(force_update = True):
-        outlets_number = hass.data[SONOFF_DOMAIN].get_outlets(device)
+    for device in hass.data[SONOFFEWE_DOMAIN].get_devices(force_update = True):
+        outlets_number = hass.data[SONOFFEWE_DOMAIN].get_outlets(device)
 
         if outlets_number is None: # fallback to whatever the device might have
             if 'switches' in device['params']: # the device has multiple switches, split them by outlets
                 for outlet in device['params']['switches']:
-                    entity = SonoffSwitch(hass, device, outlet['outlet'])
+                    entity = SonoffeweSwitch(hass, device, outlet['outlet'])
                     entities.append(entity)
 
             elif 'switch' in device['params'] or 'state' in device['params']:
-                entity = SonoffSwitch(hass, device)
+                entity = SonoffeweSwitch(hass, device)
                 entities.append(entity)
 
         elif outlets_number > 1: # the device has multiple switches, split them by available outlets
             for outlet in range(0, outlets_number):
-                entity = SonoffSwitch(hass, device, outlet)
+                entity = SonoffeweSwitch(hass, device, outlet)
                 entities.append(entity)
 
-        # normal device = Sonoff Basic (and alike)
-        elif 'switch' in device['params'] or 'state' in device['params']: #ignore devices like Sonoff RF bridge:
-            entity = SonoffSwitch(hass, device)
+        # normal device = Sonoffewe Basic (and alike)
+        elif 'switch' in device['params'] or 'state' in device['params']: #ignore devices like Sonoffewe RF bridge:
+            entity = SonoffeweSwitch(hass, device)
             entities.append(entity)
 
-    if hass.data[SONOFF_DOMAIN].get_debug_state():
-        debug_entity = SonoffDebugSwitch(hass)
+    if hass.data[SONOFFEWE_DOMAIN].get_debug_state():
+        debug_entity = SonoffeweDebugSwitch(hass)
         entities.append(debug_entity)
 
     if len(entities):
         async_add_entities(entities, update_before_add=False)
 
-class SonoffSwitch(SonoffDevice, SwitchDevice):
-    """Representation of a Sonoff switch device."""
+class SonoffeweSwitch(SonoffeweDevice, SwitchDevice):
+    """Representation of a Sonoffewe switch device."""
 
     def __init__(self, hass, device, outlet = None):
         """Initialize the device."""
 
         # add switch unique stuff here if needed
-        SonoffDevice.__init__(self, hass, device)
+        SonoffeweDevice.__init__(self, hass, device)
         self._outlet = outlet
         self._name   = '{}{}'.format(device['name'], '' if outlet is None else ' '+str(outlet+1))
 
@@ -77,7 +77,7 @@ class SonoffSwitch(SonoffDevice, SwitchDevice):
 
     def turn_on(self, **kwargs):
         """Turn the device on."""
-        self._hass.bus.async_fire('sonoff_state', {
+        self._hass.bus.async_fire('sonoffewe_state', {
             'state'     : True,
             'deviceid'  : self._deviceid,
             'outlet'    : self._outlet
@@ -86,7 +86,7 @@ class SonoffSwitch(SonoffDevice, SwitchDevice):
 
     def turn_off(self, **kwargs):
         """Turn the device off."""
-        self._hass.bus.async_fire('sonoff_state', {
+        self._hass.bus.async_fire('sonoffewe_state', {
             'state'     : False,
             'deviceid'  : self._deviceid,
             'outlet'    : self._outlet
@@ -98,8 +98,8 @@ class SonoffSwitch(SonoffDevice, SwitchDevice):
     def entity_id(self):
         """Return the unique id of the switch."""
 
-        if self._hass.data[SONOFF_DOMAIN].get_entity_prefix():
-            entity_id = "{}.{}_{}".format(DOMAIN, SONOFF_DOMAIN, self._deviceid)
+        if self._hass.data[SONOFFEWE_DOMAIN].get_entity_prefix():
+            entity_id = "{}.{}_{}".format(DOMAIN, SONOFFEWE_DOMAIN, self._deviceid)
         else:
             entity_id = "{}.{}".format(DOMAIN, self._deviceid)
 
@@ -108,7 +108,7 @@ class SonoffSwitch(SonoffDevice, SwitchDevice):
 
         return entity_id
 
-class SonoffDebugSwitch(SwitchDevice):
+class SonoffeweDebugSwitch(SwitchDevice):
     def __init__(self, hass):
         self._hass = hass
 
@@ -118,7 +118,7 @@ class SonoffDebugSwitch(SwitchDevice):
 
     @property
     def name(self):
-        return "sonoff debug"
+        return "sonoffewe debug"
 
     @property
     def available(self):
@@ -129,17 +129,17 @@ class SonoffDebugSwitch(SwitchDevice):
 
     @property
     def entity_id(self):
-        entity_id = "{}.{}".format(DOMAIN, 'sonoff_debug')
+        entity_id = "{}.{}".format(DOMAIN, 'sonoffewe_debug')
         return entity_id
 
     @property
     def is_on(self):
-        return self._hass.states.get('switch.sonoff_debug') and \
-                self._hass.states.is_state('switch.sonoff_debug','on')
+        return self._hass.states.get('switch.sonoffewe_debug') and \
+                self._hass.states.is_state('switch.sonoffewe_debug','on')
 
     def turn_on(self, **kwargs):
-        self._hass.states.set('switch.sonoff_debug', 'on')
+        self._hass.states.set('switch.sonoffewe_debug', 'on')
 
     def turn_off(self, **kwargs):
-        self._hass.states.set('switch.sonoff_debug', 'off') # , attr
-        self._hass.data[SONOFF_DOMAIN].write_debug('{}') # send dummy data to trigger the notification
+        self._hass.states.set('switch.sonoffewe_debug', 'off') # , attr
+        self._hass.data[SONOFFEWE_DOMAIN].write_debug('{}') # send dummy data to trigger the notification
