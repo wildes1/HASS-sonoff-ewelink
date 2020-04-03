@@ -3,15 +3,15 @@ import logging, time, hmac, hashlib, random, base64, json, socket
 from datetime import timedelta
 from homeassistant.util import Throttle
 from homeassistant.components.sensor import DOMAIN
-# from homeassistant.components.sonoff import (DOMAIN as SONOFF_DOMAIN, SonoffDevice)
-from custom_components.sonoff import (DOMAIN as SONOFF_DOMAIN, SonoffDevice)
+# from homeassistant.components.sonoffewe import (DOMAIN as SONOFFEWE_DOMAIN, SonoffeweDevice)
+from custom_components.sonoffewe import (DOMAIN as SONOFFEWE_DOMAIN, SonoffeweDevice)
 from homeassistant.const import TEMP_CELSIUS
 
 SCAN_INTERVAL = timedelta(seconds=10)
 
 _LOGGER = logging.getLogger(__name__)
 
-SONOFF_SENSORS_MAP = {
+SONOFFEWE_SENSORS_MAP = {
     'power'                 : { 'eid' : 'power',        'uom' : 'W',            'icon' : 'mdi:flash-outline' },
     'current'               : { 'eid' : 'current',      'uom' : 'A',            'icon' : 'mdi:current-ac' },
     'voltage'               : { 'eid' : 'voltage',      'uom' : 'V',            'icon' : 'mdi:power-plug' },
@@ -27,36 +27,36 @@ SONOFF_SENSORS_MAP = {
 }
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Add the Sonoff Sensor entities"""
+    """Add the Sonoffewe Sensor entities"""
 
     entities = []
-    for device in hass.data[SONOFF_DOMAIN].get_devices(force_update = False):
+    for device in hass.data[SONOFFEWE_DOMAIN].get_devices(force_update = False):
         # as far as i know only 1-switch devices seem to have sensor-like capabilities
 
         if 'params' not in device.keys(): continue # this should never happen... but just in case
 
-        for sensor in SONOFF_SENSORS_MAP.keys():
+        for sensor in SONOFFEWE_SENSORS_MAP.keys():
             if device['params'].get(sensor) and device['params'].get(sensor) != "unavailable":
-                entity = SonoffSensor(hass, device, sensor)
+                entity = SonoffeweSensor(hass, device, sensor)
                 entities.append(entity)
 
     if len(entities):
         async_add_entities(entities, update_before_add=False)
 
-class SonoffSensor(SonoffDevice):
-    """Representation of a Sonoff sensor."""
+class SonoffeweSensor(SonoffeweDevice):
+    """Representation of a Sonoffewe sensor."""
 
     def __init__(self, hass, device, sensor = None):
         """Initialize the device."""
-        SonoffDevice.__init__(self, hass, device)
+        SonoffeweDevice.__init__(self, hass, device)
         self._sensor        = sensor
-        self._name          = '{} {}'.format(device['name'], SONOFF_SENSORS_MAP[self._sensor]['eid'])
+        self._name          = '{} {}'.format(device['name'], SONOFFEWE_SENSORS_MAP[self._sensor]['eid'])
         self._attributes    = {}
 
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        return SONOFF_SENSORS_MAP[self._sensor]['uom']
+        return SONOFFEWE_SENSORS_MAP[self._sensor]['uom']
 
     @property
     def state(self):
@@ -67,10 +67,10 @@ class SonoffSensor(SonoffDevice):
     @property
     def entity_id(self):
         """Return the unique id of the switch."""
-        entity_id = "{}.{}_{}_{}".format(DOMAIN, SONOFF_DOMAIN, self._deviceid, SONOFF_SENSORS_MAP[self._sensor]['eid'])
+        entity_id = "{}.{}_{}_{}".format(DOMAIN, SONOFFEWE_DOMAIN, self._deviceid, SONOFFEWE_SENSORS_MAP[self._sensor]['eid'])
         return entity_id
 
     @property
     def icon(self):
         """Return the icon."""
-        return SONOFF_SENSORS_MAP[self._sensor]['icon']
+        return SONOFFEWE_SENSORS_MAP[self._sensor]['icon']
