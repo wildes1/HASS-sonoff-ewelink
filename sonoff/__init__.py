@@ -21,7 +21,7 @@ CONF_GRACE_PERIOD   = 'grace_period'
 CONF_DEBUG          = 'debug'
 CONF_ENTITY_PREFIX  = 'entity_prefix'
 
-DOMAIN              = "sonoff"
+DOMAIN              = "sonoffewe"
 
 REQUIREMENTS        = ['uuid', 'websocket-client==0.54.0']
 
@@ -46,18 +46,18 @@ CONFIG_SCHEMA = vol.Schema({
 }, extra=vol.ALLOW_EXTRA)
 
 async def async_setup(hass, config):
-    """Setup the eWelink/Sonoff component."""
+    """Setup the eWelink/Sonoffewe component."""
 
     _LOGGER.debug("Create the main object")
 
-    hass.data[DOMAIN] = Sonoff(hass, config)
+    hass.data[DOMAIN] = Sonoffewe(hass, config)
 
     if hass.data[DOMAIN].get_wshost(): # make sure login was successful
 
         for component in ['switch','sensor']:
             discovery.load_platform(hass, component, DOMAIN, {}, config)
 
-        hass.bus.async_listen('sonoff_state', hass.data[DOMAIN].state_listener)
+        hass.bus.async_listen('sonoffewe_state', hass.data[DOMAIN].state_listener)
 
         # close the websocket when HA stops
         # hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, hass.data[DOMAIN].get_ws().close())
@@ -69,7 +69,7 @@ async def async_setup(hass, config):
 
     return True
 
-class Sonoff():
+class Sonoffewe():
     def __init__(self, hass, config):
 
         self._hass          = hass
@@ -82,8 +82,8 @@ class Sonoff():
         self._entity_prefix = config.get(DOMAIN, {}).get(CONF_ENTITY_PREFIX,'')
         self._scan_interval = config.get(DOMAIN, {}).get(CONF_SCAN_INTERVAL)
 
-        self._sonoff_debug  = config.get(DOMAIN, {}).get(CONF_DEBUG, False)
-        self._sonoff_debug_log = []
+        self._sonoffewe_debug  = config.get(DOMAIN, {}).get(CONF_DEBUG, False)
+        self._sonoffewe_debug_log = []
 
         if self._email and not self._username: # backwards compatibility
             self._username = self._email.strip()
@@ -109,10 +109,10 @@ class Sonoff():
         return self._scan_interval
 
     def get_debug_state(self):
-        return self._sonoff_debug
+        return self._sonoffewe_debug
 
     def get_entity_prefix(self):
-        # if the entities should have `sonoff_` prefixed or not
+        # if the entities should have `sonoffewe_` prefixed or not
         # a quick fix between (i-blame-myself) `master` vs. `websocket` implementations
         return self._entity_prefix
 
@@ -225,7 +225,7 @@ class Sonoff():
             self._wshost = resp['domain']
             _LOGGER.info("Found websocket address: %s", self._wshost)
         else:
-            _LOGGER.error("Couldn't find a valid websocket host, abording Sonoff init")
+            _LOGGER.error("Couldn't find a valid websocket host, abording Sonoffewe init")
 
     async def state_listener(self, event):
         if not self.get_ws().connected:
@@ -301,7 +301,7 @@ class Sonoff():
         # keep websocket open indefinitely
         while True:
             _LOGGER.debug('(re)init websocket')
-            self._ws = WebsocketListener(sonoff=self, on_message=self.on_message, on_error=self.on_error)
+            self._ws = WebsocketListener(sonoffewe=self, on_message=self.on_message, on_error=self.on_error)
 
             try:
                 # 145 interval is defined by the first websocket response after login
@@ -346,7 +346,7 @@ class Sonoff():
 
     def set_entity_state(self, deviceid, state, outlet=None):
         entity_id = 'switch.%s%s%s' % (
-            'sonoff_' if self._entity_prefix else '',
+            'sonoffewe_' if self._entity_prefix else '',
             deviceid,
             '_'+str(outlet+1) if outlet is not None else ''
         )
@@ -377,7 +377,7 @@ class Sonoff():
 
         resp = r.json()
         if 'error' in resp and resp['error'] in [HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED]:
-            # @IMPROVE add maybe a service call / switch to deactivate sonoff component
+            # @IMPROVE add maybe a service call / switch to deactivate sonoffewe component
             if self.is_grace_period():
                 _LOGGER.warning("Grace period activated!")
 
@@ -522,11 +522,11 @@ class Sonoff():
     ### sonog_debug.log section ###
     def write_debug(self, data, type = '', new = False):
 
-        if self._sonoff_debug and self._hass.states.get('switch.sonoff_debug') and self._hass.states.is_state('switch.sonoff_debug','on'):
+        if self._sonoffewe_debug and self._hass.states.get('switch.sonoffewe_debug') and self._hass.states.is_state('switch.sonoffewe_debug','on'):
 
-            if not len(self._sonoff_debug_log):
-                _LOGGER.debug("init sonoff debug data capture")
-                self._sonoff_debug_log.append(".\n--------------COPY-FROM-HERE--------------\n\n")
+            if not len(self._sonoffewe_debug_log):
+                _LOGGER.debug("init sonoffewe debug data capture")
+                self._sonoffewe_debug_log.append(".\n--------------COPY-FROM-HERE--------------\n\n")
 
             data = json.loads(data)
 
@@ -554,17 +554,17 @@ class Sonoff():
             data = json.dumps(json.loads(data))
 
             data = "%s [%s] %s\n\n" % (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], type, data)
-            self._sonoff_debug_log.append(data)
+            self._sonoffewe_debug_log.append(data)
 
-        elif self._sonoff_debug and len(self._sonoff_debug_log) and \
-            self._hass.states.get('switch.sonoff_debug') and \
-            self._hass.states.is_state('switch.sonoff_debug','off'):
+        elif self._sonoffewe_debug and len(self._sonoffewe_debug_log) and \
+            self._hass.states.get('switch.sonoffewe_debug') and \
+            self._hass.states.is_state('switch.sonoffewe_debug','off'):
 
-            _LOGGER.debug("end of sonoff debug log")
-            self._sonoff_debug_log.append("---------------END-OF-COPY----------------\n")
-            self._sonoff_debug_log = [x.encode('utf-8') for x in self._sonoff_debug_log]
-            self._hass.components.persistent_notification.async_create(str(b"".join(self._sonoff_debug_log), 'utf-8'), 'Sonoff debug')
-            self._sonoff_debug_log = []
+            _LOGGER.debug("end of sonoffewe debug log")
+            self._sonoffewe_debug_log.append("---------------END-OF-COPY----------------\n")
+            self._sonoffewe_debug_log = [x.encode('utf-8') for x in self._sonoffewe_debug_log]
+            self._hass.components.persistent_notification.async_create(str(b"".join(self._sonoffewe_debug_log), 'utf-8'), 'Sonoffewe debug')
+            self._sonoffewe_debug_log = []
 
     def clean_data(self, data):
         data = re.sub(r'"phoneNumber": ".*"', '"phoneNumber": "[hidden]",', data)
@@ -578,11 +578,11 @@ class Sonoff():
         return data
 
 class WebsocketListener(threading.Thread, websocket.WebSocketApp):
-    def __init__(self, sonoff, on_message=None, on_error=None):
-        self._sonoff        = sonoff
+    def __init__(self, sonoffewe, on_message=None, on_error=None):
+        self._sonoffewe        = sonoffewe
 
         threading.Thread.__init__(self)
-        websocket.WebSocketApp.__init__(self, 'wss://{}:8080/api/ws'.format(self._sonoff.get_wshost()),
+        websocket.WebSocketApp.__init__(self, 'wss://{}:8080/api/ws'.format(self._sonoffewe.get_wshost()),
                                         on_open=self.on_open,
                                         on_error=on_error,
                                         on_message=on_message,
@@ -602,11 +602,11 @@ class WebsocketListener(threading.Thread, websocket.WebSocketApp):
             'nonce'     : ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(8)),
             'apkVersion': "1.8",
             'os'        : 'iOS',
-            'at'        : self._sonoff.get_bearer_token(),
-            'apikey'    : self._sonoff.get_user_apikey(),
+            'at'        : self._sonoffewe.get_bearer_token(),
+            'apikey'    : self._sonoffewe.get_user_apikey(),
             'ts'        : str(int(time.time())),
-            'model'     : self._sonoff.get_model(),
-            'romVersion': self._sonoff.get_romVersion(),
+            'model'     : self._sonoffewe.get_model(),
+            'romVersion': self._sonoffewe.get_romVersion(),
             'sequence'  : str(time.time()).replace('.','')
         }
 
@@ -623,8 +623,8 @@ class WebsocketListener(threading.Thread, websocket.WebSocketApp):
                                             ping_interval=ping_interval,
                                             ping_timeout=ping_timeout)
 
-class SonoffDevice(Entity):
-    """Representation of a Sonoff device"""
+class SonoffeweDevice(Entity):
+    """Representation of a Sonoffewe device"""
 
     def __init__(self, hass, device):
         """Initialize the device."""
